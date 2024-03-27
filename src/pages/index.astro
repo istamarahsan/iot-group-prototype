@@ -1,5 +1,6 @@
 ---
-
+import TransmitterApp from "../components/TransmitterApp.vue"
+import "../styles/globals.css"
 ---
 
 <html lang="en">
@@ -8,9 +9,9 @@
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>Weehee</title>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<TransmitterApp client:load />
 	</body>
 </html>
