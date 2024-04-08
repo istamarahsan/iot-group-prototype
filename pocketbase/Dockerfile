@@ -22,6 +22,7 @@ WORKDIR /pb
 
 COPY --from=build /build/pb .
 
-COPY ./migrations ./pb_migrations
+COPY ./migration[s] ./pb_migrations
+COPY ./hook[s] ./pb_hooks
 
 CMD ["sh", "-c", "/pb/pb serve --http=0.0.0.0:${PORT:-8080}"]
