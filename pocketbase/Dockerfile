@@ -8,7 +8,7 @@ COPY go.sum .
 RUN go mod download
 
 COPY *.go .
-COPY migrations/*.go ./migrations/
+COPY migrations/*.g[o] ./migrations/
 
 RUN CGO_ENABLED=0 go build -o pb
 
