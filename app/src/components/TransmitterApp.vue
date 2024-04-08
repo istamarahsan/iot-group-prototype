@@ -4,21 +4,37 @@ import { Switch } from "./ui/switch"
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover"
 import { Button } from "./ui/button"
 import { computed, onMounted, ref, watch } from "vue"
+import Pocketbase from "pocketbase"
 
-const locations = [
-    "A",
-    "B",
-    "C"
-]
-const switchStatus = ref(false)
-const locationIdx = ref(0)
-const locationPopoverOpen = ref(false)
-const location = computed(() => locations[locationIdx.value])
+const PB_URL = import.meta.env.PUBLIC_PB_URL
+const TRANSMIT_INTERVAL_MS = parseInt(import.meta.env.PUBLIC_TRANSMIT_INTERVAL_MS)
+const pb = new Pocketbase(PB_URL)
+
+type LocationRecord = {
+    id: string,
+    name: string
+}
+
+const locations = ref<Record<string, LocationRecord>>({})
+const locationId = ref<string | undefined>(undefined)
+const location = computed<LocationRecord | undefined>(() => locationId.value ? locations.value[locationId.value] : undefined)
 const recorder = ref<MediaRecorder | undefined>()
+
+const switchOn = ref(false)
+const locationPopoverOpen = ref(false)
 
 onMounted(async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     recorder.value = new MediaRecorder(stream)
+
+    const getLocations = await pb.collection("locations").getFullList()
+    locations.value = getLocations
+        .map((r) => ({ id: r.id, name: r["name"] }))
+        .reduce<Record<string, LocationRecord>>((obj, e) => {
+            obj[e.id] = e
+            return obj
+        }, {})
+    locationId.value = Object.values(locations.value)[0]?.id
 })
 
 watch(recorder, (_recorder) => {
@@ -28,17 +44,28 @@ watch(recorder, (_recorder) => {
     _recorder.ondataavailable = (e) => onRecorderDataAvailable(e.data)
 })
 
-watch(switchStatus, (on) => {
+watch(switchOn, (on) => {
     if (on) {
-        recorder.value?.start(1000)
+        recorder.value?.start(TRANSMIT_INTERVAL_MS)
     }
     else {
         recorder.value?.stop()
     }
 })
 
-function onRecorderDataAvailable(data: Blob) {
-    data.text().then(t => console.log(t))
+async function onRecorderDataAvailable(data: Blob) {
+    const l = location.value
+    if (l === undefined) {
+        return
+    }
+    const formData = new FormData();
+    formData.append("content", data, "reading.oga")
+    formData.append("location", l.id)
+    try {
+        await pb.collection("readings").create(formData)
+    } catch (error) {
+        console.error(error)
+    }
 }
 
 </script>
@@ -51,18 +78,18 @@ function onRecorderDataAvailable(data: Blob) {
                     Enable
                 </div>
                 <div>
-                    <Switch class="bg-zinc-500 text-zinc-500" v-model:checked="switchStatus" />
+                    <Switch class="bg-zinc-500 text-zinc-500" v-model:checked="switchOn" />
                 </div>
                 <div>
                     Status
                 </div>
                 <div>
-                    {{ switchStatus ? "ON" : "OFF" }}
+                    {{ switchOn ? "ON" : "OFF" }}
                 </div>
             </div>
             <Popover v-model:open="locationPopoverOpen">
                 <PopoverTrigger>
-                    Location: {{ location }}
+                    Location: <br /> {{ location?.name }}
                 </PopoverTrigger>
                 <PopoverContent class="bg-white rounded-2xl w-60 border border-black">
                     <div class="grid gap-4">
@@ -71,7 +98,7 @@ function onRecorderDataAvailable(data: Blob) {
                         </p>
                         <div class="flex flex-col gap-2">
                             <template v-for="location, idx in locations">
-                                <Button v-on:click="locationIdx = idx; locationPopoverOpen = false">{{ location
+                                <Button v-on:click="locationId = idx; locationPopoverOpen = false">{{ location.name
                                     }}</Button>
                             </template>
                         </div>

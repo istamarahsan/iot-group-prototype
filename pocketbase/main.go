@@ -3,9 +3,10 @@ package main
 import (
 	"log"
 
-	"github.com/labstack/echo/v5"
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 )
 
@@ -27,10 +28,39 @@ func configure(app *pocketbase.PocketBase) {
 }
 
 func routes(app *pocketbase.PocketBase) {
-	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-		e.Router.POST("", func(c echo.Context) error {
+	app.OnRecordBeforeCreateRequest("readings").Add(func(e *core.RecordCreateEvent) error {
+		maxBuffer := getMaxBuffer(app)
+		targetLocationId := e.Record.GetString("location")
+		readings := []models.Record{}
+		err := app.Dao().
+			RecordQuery("readings").
+			Where(dbx.HashExp{"location": targetLocationId}).
+			OrderBy("created ASC").
+			All(&readings)
+		if err != nil {
+			app.Logger().Error(err.Error())
+			return err
+		}
+		numberOfReadings := len(readings)
+		if numberOfReadings == 0 || numberOfReadings < maxBuffer {
 			return nil
-		})
+		}
+
+		earliestReading := readings[0]
+		err = app.Dao().DeleteRecord(&earliestReading)
+		if err != nil {
+			app.Logger().Error(err.Error())
+			return err
+		}
+
 		return nil
 	})
+}
+
+func getMaxBuffer(app *pocketbase.PocketBase) int {
+	record, err := app.Dao().FindRecordsByExpr("configs", dbx.HashExp{"name": "max_buffer"})
+	if err != nil || len(record) == 0 {
+		return 20
+	}
+	return record[0].GetInt("value")
 }
