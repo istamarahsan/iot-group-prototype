@@ -21,4 +21,4 @@ WORKDIR /usr/src
 RUN pip install uvicorn
 RUN pip install -r requirements.txt
 
-CMD ["uvicorn", "main:app", "--port", "${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn main:app --port ${PORT:-8000}"]
