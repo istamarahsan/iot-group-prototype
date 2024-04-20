@@ -1,6 +1,6 @@
 FROM python:3.12-bookworm AS base
 
-RUN apt update && apt install ffmpeg -y
+RUN apt-get update && apt-get install ffmpeg -y
 
 FROM base AS builder
 
