@@ -1,1 +1,1 @@
-FROM thingsboard/tb:3.3.4
+FROM thingsboard/tb-postgres:3.3.4
