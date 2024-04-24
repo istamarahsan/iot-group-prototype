@@ -96,7 +96,7 @@ func hooks(app *pocketbase.PocketBase) {
 		err := app.Dao().
 			RecordQuery("readings").
 			Where(dbx.HashExp{"location": targetLocationId}).
-			OrderBy("created ASC").
+			OrderBy("created DESC").
 			All(&readings)
 		if err != nil {
 			app.Logger().Error(err.Error())

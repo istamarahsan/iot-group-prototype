@@ -15,10 +15,12 @@ FROM base AS run
 
 COPY --from=builder /usr/src/requirements.txt /usr/src
 
-ADD main.py /usr/src/
-
 WORKDIR /usr/src
 RUN pip install uvicorn
 RUN pip install -r requirements.txt
 
-CMD ["sh", "-c", "uvicorn main:app --host :: --port ${PORT:-8000}"]
+ADD main.py /usr/src/
+
+EXPOSE ${PORT:-8000}
+
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

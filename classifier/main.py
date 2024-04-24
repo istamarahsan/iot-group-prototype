@@ -10,12 +10,12 @@ app = FastAPI()
 TOKEN = os.environ["ACCESS_KEY"]
 
 @app.get("/health")
-async def healthcheck(request: Request):
-    return http.HTTPStatus.OK if TOKEN != "" and request.headers['Authorization'] == f"Bearer {TOKEN}" else http.HTTPStatus.UNAUTHORIZED
+async def healthcheck():
+    return http.HTTPStatus.OK
 
 @app.post("/classify")
 async def classify(request: Request):
-    if TOKEN != "" and request.headers['Authorization'] == f"Bearer {TOKEN}":
+    if TOKEN != "" and ((not "Authorization" in request.headers) or request.headers['Authorization'] != f"Bearer {TOKEN}"):
         return http.HTTPStatus.UNAUTHORIZED
 
     bytes = await request.body()

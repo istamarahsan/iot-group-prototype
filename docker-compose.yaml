@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  pb:
+    build: pocketbase/
+    ports:
+      - "80:8080"
+    volumes:
+      - ./pocketbase/pb_data:/pb/pb_data
+    environment:
+      CLASSIFIER_URL: "https://classifier:8000"
+      CLASSIFIER_KEY: "iotg"
+  classifier:
+    build: classifier/
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      HF_HOME: "/hf_cache"
+      ACCESS_KEY: "iotg"
+    volumes:
+      - ./classifier/cache:/hf_cache
+    
