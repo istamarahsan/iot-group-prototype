@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -74,7 +73,7 @@ func hooks(app *pocketbase.PocketBase) {
 
 				result, err := classify(&http.Client{}, CLASSIFIER_URL+"/classify", fileBytes)
 				if err != nil {
-					app.Logger().Error("Unable to classify audio file", "filename", fileName)
+					app.Logger().Error("Unable to classify audio file", "filename", fileName, "error", err)
 					time.Sleep(tMinimumWait)
 					continue
 				}
@@ -128,7 +127,7 @@ func getMaxBuffer(app *pocketbase.PocketBase) int {
 }
 
 func classify(client *http.Client, endpoint string, fileBytes []byte) ([]interface{}, error) {
-	req, err := http.NewRequest("POST", CLASSIFIER_URL+"/classify", bytes.NewBuffer(fileBytes))
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(fileBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -151,14 +150,14 @@ func classify(client *http.Client, endpoint string, fileBytes []byte) ([]interfa
 
 	// Check if the response status code is not 200 OK
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("Response failed: %d", resp.Status))
+		return nil, fmt.Errorf("response failed: %s", resp.Status)
 	}
 
 	// Parse the JSON response
 	var result []interface{} // Change interface{} to your specific type
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error parsing JSON: %s", err.Error()))
+		return nil, fmt.Errorf("error parsing JSON: %s", err.Error())
 	}
 
 	return result, nil
