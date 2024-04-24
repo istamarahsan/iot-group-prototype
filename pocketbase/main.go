@@ -53,20 +53,20 @@ func hooks(app *pocketbase.PocketBase) {
 			for {
 				tStart := time.Now()
 
-				latestReading := models.Record{}
+				latestReadingRecord := models.Record{}
 
 				err := app.Dao().
 					RecordQuery("readings").
 					OrderBy("created ASC").
-					One(&latestReading)
+					One(&latestReadingRecord)
 				if err != nil {
 					time.Sleep(tMinimumWait)
 					continue
 				}
 
 				dataDir := app.DataDir()
-				recordFilePath := latestReading.BaseFilesPath()
-				fileName := latestReading.Get("content")
+				recordFilePath := latestReadingRecord.BaseFilesPath()
+				fileName := latestReadingRecord.Get("content")
 
 				fileBytes, err := os.ReadFile(fmt.Sprintf("%s/storage/%s/%s", dataDir, recordFilePath, fileName))
 				if err != nil {
@@ -83,7 +83,20 @@ func hooks(app *pocketbase.PocketBase) {
 				}
 
 				app.Logger().Debug("classification of audio file", "results", result)
-				app.Dao().DeleteRecord(&latestReading)
+
+				collection, err := app.Dao().FindCollectionByNameOrId("results")
+				if err != nil {
+					app.Logger().Error("Unable to save audio classification results", "error", err)
+					time.Sleep(tMinimumWait)
+					continue
+				}
+
+				resultRecord := models.NewRecord(collection)
+				resultRecord.Set("location", latestReadingRecord.Get("location"))
+				resultRecord.Set("result", result)
+				resultRecord.Set("timestamp", latestReadingRecord.Created)
+				app.Dao().SaveRecord(resultRecord)
+				app.Dao().DeleteRecord(&latestReadingRecord)
 
 				tEnd := time.Now()
 				time.Sleep(min(1*time.Second, tMinimumWait-tEnd.Sub(tStart)))
