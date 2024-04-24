@@ -82,7 +82,7 @@ func hooks(app *pocketbase.PocketBase) {
 				app.Dao().DeleteRecord(&latestReading)
 
 				tEnd := time.Now()
-				time.Sleep(max(0, tMinimumWait-tEnd.Sub(tStart)))
+				time.Sleep(min(1*time.Second, tMinimumWait-tEnd.Sub(tStart)))
 			}
 		}()
 
