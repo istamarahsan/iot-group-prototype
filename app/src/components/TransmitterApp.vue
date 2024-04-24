@@ -15,11 +15,23 @@ type LocationRecord = {
     name: string
 }
 
+type State = StateOn | StateOff
+
+type StateOn = {
+    on: true
+    timerId: number
+}
+
+type StateOff = {
+    on: false
+}
+
 const locations = ref<Record<string, LocationRecord>>({})
 const locationId = ref<string | undefined>(undefined)
 const location = computed<LocationRecord | undefined>(() => locationId.value ? locations.value[locationId.value] : undefined)
 const recorder = ref<MediaRecorder | undefined>()
 
+const transmitterState = ref<State>({on: false})
 const switchOn = ref(false)
 const locationPopoverOpen = ref(false)
 
@@ -46,10 +58,21 @@ watch(recorder, (_recorder) => {
 
 watch(switchOn, (on) => {
     if (on) {
-        recorder.value?.start(TRANSMIT_INTERVAL_MS)
+        if (!transmitterState.value.on) {
+            transmitterState.value = {
+                on: true,
+                timerId: setInterval(() => {
+                    recorder.value?.stop()
+                    recorder.value?.start()
+                }, TRANSMIT_INTERVAL_MS)
+            }
+        }
     }
     else {
-        recorder.value?.stop()
+        if (transmitterState.value.on) {
+            clearInterval(transmitterState.value.timerId)
+            transmitterState.value = { on: false }
+        }
     }
 })
 
