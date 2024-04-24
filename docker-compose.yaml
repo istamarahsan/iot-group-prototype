@@ -7,7 +7,7 @@ services:
     volumes:
       - ./pocketbase/pb_data:/pb/pb_data
     environment:
-      CLASSIFIER_URL: "https://classifier:8000"
+      CLASSIFIER_URL: "http://classifier:8000"
       CLASSIFIER_KEY: "iotg"
   classifier:
     build: classifier/
