@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"time"
@@ -19,7 +18,6 @@ import (
 )
 
 var CLASSIFIER_URL string
-var CLASSIFIER_KEY string
 
 func main() {
 	classifierUrl, isClassifierUrlPresent := os.LookupEnv("CLASSIFIER_URL")
@@ -27,9 +25,6 @@ func main() {
 		log.Fatal("CLASSIFIER_URL is not set")
 	}
 	CLASSIFIER_URL = classifierUrl
-
-	classifierKey := os.Getenv("CLASSIFIER_KEY")
-	CLASSIFIER_KEY = classifierKey
 
 	app := pocketbase.New()
 
@@ -132,50 +127,35 @@ func getMaxBuffer(app *pocketbase.PocketBase) int {
 }
 
 func classify(client *http.Client, endpoint string, fileBytes []byte) ([]interface{}, error) {
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	part, err := writer.CreateFormFile("file", "audio.oga")
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(fileBytes))
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = io.Copy(part, bytes.NewBuffer(fileBytes))
-	if err != nil {
-		return nil, err
-	}
+	// Set headers
+	req.Header.Set("Content-Type", "audio/ogg")
 
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", endpoint, io.NopCloser(body))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("Authorization", "Bearer "+CLASSIFIER_KEY)
-
+	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
+
 	// Read the response body
-	responseBody, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	resp.Body.Close()
-
+	// Check if the response status code is not 200 OK
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("response failed: %s", resp.Status)
 	}
 
-	var result []interface{}
-	err = json.Unmarshal(responseBody, &result)
+	// Parse the JSON response
+	var result []interface{} // Change interface{} to your specific type
+	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing JSON: %s", err.Error())
 	}
