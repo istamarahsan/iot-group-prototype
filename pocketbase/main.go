@@ -18,6 +18,7 @@ import (
 )
 
 var CLASSIFIER_URL string
+var CLASSIFIER_KEY string
 
 func main() {
 	classifierUrl, isClassifierUrlPresent := os.LookupEnv("CLASSIFIER_URL")
@@ -25,6 +26,9 @@ func main() {
 		log.Fatal("CLASSIFIER_URL is not set")
 	}
 	CLASSIFIER_URL = classifierUrl
+
+	classifierKey := os.Getenv("CLASSIFIER_KEY")
+	CLASSIFIER_KEY = classifierKey
 
 	app := pocketbase.New()
 
@@ -134,6 +138,7 @@ func classify(client *http.Client, endpoint string, fileBytes []byte) ([]interfa
 
 	// Set headers
 	req.Header.Set("Content-Type", "audio/ogg")
+	req.Header.Set("Authorization", "Bearer "+CLASSIFIER_KEY)
 
 	// Send the request
 	resp, err := client.Do(req)
