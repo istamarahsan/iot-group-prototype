@@ -1,8 +1,0 @@
-version: '3.8'
-services:
-  tb:
-    build: .
-    ports:
-      - "80:9090"
-    environment:
-      TB_QUEUE_TYPE: in-memory
